@@ -1,7 +1,8 @@
-package main
+package server
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -23,6 +24,7 @@ func NewLog() *Log {
 }
 
 func (c *Log) Append(record Record) (uint64, error) {
+	log.Printf("beginning append")
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

@@ -9,10 +9,11 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
+// Want to transition the lock from the log to the segment. Reason: only 1 active segment should ever be RW. All other segments only contain Reads because they are at their MaxBytes defined by Config. Only need to lock the Log when creating a new active segment.
 type segment struct {
 	store      *store
 	index      *index
-	baseOffset uint64 //relative offset for position within this segment
+	baseOffset uint64 //relative offset for where this segment begins.
 	nextOffset uint64 //absolute offset for position within the entire log
 	config     Config
 }
@@ -38,7 +39,7 @@ func newSegment(dir string, baseOffset uint64, c Config) (*segment, error) {
 	}
 
 	indexFile, err := os.OpenFile(
-		path.Join(dir, fmt.Sprintf("%d%s", baseOffset)),
+		path.Join(dir, fmt.Sprintf("%d%s", baseOffset, ".index")),
 		os.O_RDWR|os.O_CREATE,
 		0644,
 	)
@@ -75,6 +76,61 @@ func (s *segment) Append(record *api.Record) (offset uint64, err error) {
 	); err != nil {
 		return 0, err
 	}
-	s.nextOffset++
+	s.nextOffset++ //increment for next append call
 	return cur, nil
+}
+
+// Read(off uint64) returns the record for the offset received.
+func (s *segment) Read(off uint64) (*api.Record, error) {
+	//translate absolute position to relative position within current segment
+	_, pos, err := s.index.Read(int64(off - s.baseOffset))
+	if err != nil {
+		return nil, err
+	}
+	p, err := s.store.Read(pos)
+	if err != nil {
+		return nil, err
+	}
+	record := &api.Record{}
+	err = proto.Unmarshal(p, record)
+	return record, err
+}
+
+// IsMaxed() returns whether the segment has reached its max size. Full index file or store file.
+func (s *segment) IsMaxed() bool {
+	return s.store.size >= s.config.Segment.MaxStoreBytes || s.index.size >= s.config.Segment.MaxIndexBytes
+}
+
+// Remove()
+func (s *segment) Remove() error {
+	if err := s.Close(); err != nil {
+		return err
+	}
+	if err := os.Remove(s.index.Name()); err != nil {
+		return err
+	}
+	if err := os.Remove(s.store.Name()); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Close()
+func (s *segment) Close() error {
+	if err := s.index.Close(); err != nil {
+		return err
+	}
+	if err := s.store.Close(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// nearestMultiple(j uint64, k uint64) returns the nearest and lesser multiple of k in j.
+// nearestMultiple(9, 4) == 8
+func nearestMultiple(j, k uint64) uint64 {
+	if j >= 0 {
+		return (j / k) * k
+	}
+	return ((j - k + 1) / k) * k
 }

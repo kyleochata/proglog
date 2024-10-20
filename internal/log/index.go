@@ -36,6 +36,7 @@ func newIndex(f *os.File, c Config) (*index, error) {
 		return nil, err
 	}
 	idx.size = uint64(fi.Size())
+	//Must grow the size of the file with truncate before writing to the file to avoid out of bounds
 	if err = os.Truncate(
 		f.Name(), int64(c.Segment.MaxIndexBytes),
 	); err != nil {
@@ -74,7 +75,7 @@ func (i *index) Read(in int64) (out uint32, pos uint64, err error) {
 	return out, pos, nil
 }
 
-// Write(off uint32, pos uint32) appends the given offset and position to the index.
+// Write(off uint32, pos uint32) appends the given offset and position to the index file.
 func (i *index) Write(off uint32, pos uint64) error {
 	//validate space to write entry
 	if uint64(len(i.mmap)) < i.size+entWidth {

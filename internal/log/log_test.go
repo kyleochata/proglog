@@ -101,6 +101,7 @@ func testReader(t *testing.T, log *Log) {
 	require.Equal(t, append.Value, read.Value)
 }
 
+// testTruncate tests that we can truncate the log and remove old segments
 func testTruncate(t *testing.T, log *Log) {
 	append := &api.Record{Value: []byte("hello world")}
 	for i := 0; i < 3; i++ {

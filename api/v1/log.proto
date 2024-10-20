@@ -4,7 +4,30 @@ package log.v1;
 
 option go_package = "github.com/kyleochata/proglog/api/v1";
 
+service Log {
+  rpc Produce(ProduceRequest) returns  (ProduceResponse){};
+  rpc Consume(ConsumeRequest) returns (ConsumeResponse){};
+  rpc ConsumeStream(ConsumeRequest) returns (stream ConsumeResponse){};
+  rpc ProduceStream(stream ProduceRequest) returns (ProduceResponse){};
+}
+
 message Record {
   bytes value = 1;
   uint64 offset = 2;
+}
+//request includes the record to produce the log entry
+message ProduceRequest{
+  Record record = 1;
+}
+//response includes the offset of the produced record
+message ProduceResponse{
+  uint64 offset = 1;
+}
+//request includes the offset of the record to consume
+message ConsumeRequest{
+  uint64 offset = 1;
+}
+//response includes the record at the given offset
+message ConsumeResponse{
+  Record record = 2;
 }

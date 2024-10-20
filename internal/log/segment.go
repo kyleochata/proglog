@@ -70,7 +70,7 @@ func (s *segment) Append(record *api.Record) (offset uint64, err error) {
 		return 0, err
 	}
 	if err = s.index.Write(
-		//calc the relative offset of the next record within this segment.
+		//calc the relative offset of the next record within this segment. nextOffset == absolute offset for entire log. Baseoffset == absolute offset for when this particular segment starts
 		uint32(s.nextOffset-uint64(s.baseOffset)),
 		pos,
 	); err != nil {
@@ -101,7 +101,7 @@ func (s *segment) IsMaxed() bool {
 	return s.store.size >= s.config.Segment.MaxStoreBytes || s.index.size >= s.config.Segment.MaxIndexBytes
 }
 
-// Remove()
+// Remove() closes the segment and removes the index and store files
 func (s *segment) Remove() error {
 	if err := s.Close(); err != nil {
 		return err
@@ -115,7 +115,7 @@ func (s *segment) Remove() error {
 	return nil
 }
 
-// Close()
+// Close() closes the index file and store files respectively
 func (s *segment) Close() error {
 	if err := s.index.Close(); err != nil {
 		return err

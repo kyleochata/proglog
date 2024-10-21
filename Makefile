@@ -1,8 +1,8 @@
-compile_proto:
-	protoc api/v1/*.proto \
-	--go_out=. \
-	--go_opt=paths=source_relative \
-	--proto_path=.
+# compile_proto:
+# 	protoc api/v1/*.proto \
+# 	--go_out=. \
+# 	--go_opt=paths=source_relative \
+# 	--proto_path=.
 
 test:
 	go test -v ./... --race
@@ -14,3 +14,5 @@ compile:
 	--go_opt=paths=source_relative \
 	--go-grpc_opt=paths=source_relative \
 	--proto_path=.
+
+

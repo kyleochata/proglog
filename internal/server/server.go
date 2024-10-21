@@ -2,8 +2,10 @@ package server
 
 import (
 	"context"
+	"fmt"
+	"io"
 
-	api "github.com/kylelochata/proglog/api/v1"
+	api "github.com/kyleochata/proglog/api/v1"
 	"google.golang.org/grpc"
 )
 
@@ -41,19 +43,24 @@ func (s *grpcServer) Consume(ctx context.Context, req *api.ConsumeRequest) (*api
 	return &api.ConsumeResponse{Record: record}, nil
 }
 
-// ProduceStream is a bidriectional streaming RPC so the client can sream data into the server's log and the server can tell the client whether each request succeeded.
+// ProduceStream is a bidirectional streaming RPC so the client can stream data into the server's log
+// and the server can tell the client whether each request succeeded.
 func (s *grpcServer) ProduceStream(stream api.Log_ProduceStreamServer) error {
 	for {
 		req, err := stream.Recv()
 		if err != nil {
-			return err
+			// If the error is EOF, it means the stream has been closed properly
+			if err == io.EOF {
+				return stream.SendAndClose(&api.ProduceResponse{})
+			}
+			return fmt.Errorf("failed to receive request: %w", err) // Add more context
 		}
 		res, err := s.Produce(stream.Context(), req)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to produce: %w", err) // Add more context
 		}
-		if err = stream.Send(res); err != nil {
-			return err
+		if err = stream.SendMsg(res); err != nil {
+			return fmt.Errorf("failed to send response: %w", err) // Add more context
 		}
 	}
 }

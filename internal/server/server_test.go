@@ -40,9 +40,10 @@ func setupTest(t *testing.T, fn func(*Config)) (
 ) {
 	t.Helper()
 
+	//create tcp listener
 	l, err := net.Listen("tcp", ":0") //port 0 will auto assign a free port
 	require.NoError(t, err)
-
+	//create gRPC Client
 	clientOptions := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	cc, err := grpc.NewClient(l.Addr().String(), clientOptions...)
 	require.NoError(t, err)
@@ -56,6 +57,7 @@ func setupTest(t *testing.T, fn func(*Config)) (
 	cfg = &Config{
 		CommitLog: clog,
 	}
+	//allow for functions to modify the *Config before server initialization if needed. (unused as of now; all tests use default Config)
 	if fn != nil {
 		fn(cfg)
 	}

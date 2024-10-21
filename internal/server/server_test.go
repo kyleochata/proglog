@@ -146,7 +146,7 @@ func testProduceConsumeStream(
 				Record: record,
 			})
 			require.NoError(t, err)
-			res, err := stream.Recv()
+			res, err := stream.CloseAndRecv()
 			require.NoError(t, err)
 			if res.Offset != uint64(offset) {
 				t.Fatalf(

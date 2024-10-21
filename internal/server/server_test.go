@@ -126,53 +126,6 @@ func testConsumePastBoundary(
 	}
 }
 
-// func testProduceConsumeStream(
-// 	t *testing.T,
-// 	client api.LogClient,
-// 	config *Config,
-// ) {
-// 	ctx := context.Background()
-// 	records := []*api.Record{{
-// 		Value:  []byte("first message"),
-// 		Offset: 0,
-// 	}, {
-// 		Value:  []byte("second message"),
-// 		Offset: 1,
-// 	}}
-
-// 	// Producing messages
-// 	{
-// 		stream, err := client.ProduceStream(ctx)
-// 		require.NoError(t, err)
-// 		for _, record := range records {
-// 			err = stream.Send(&api.ProduceRequest{
-// 				Record: record,
-// 			})
-// 			require.NoError(t, err)
-// 		}
-
-// 		// Close the stream after sending all messages
-// 		_, err = stream.CloseAndRecv() // Ensure the server receives the end of the stream
-// 		require.NoError(t, err)
-// 	}
-
-//		// Consuming messages
-//		{
-//			stream, err := client.ConsumeStream(
-//				ctx,
-//				&api.ConsumeRequest{Offset: 0},
-//			)
-//			require.NoError(t, err)
-//			for i, record := range records {
-//				res, err := stream.Recv()
-//				require.NoError(t, err)
-//				require.Equal(t, res.Record, &api.Record{
-//					Value:  record.Value,
-//					Offset: uint64(i),
-//				})
-//			}
-//		}
-//	}
 func testProduceConsumeStream(
 	t *testing.T,
 	client api.LogClient,
@@ -195,6 +148,7 @@ func testProduceConsumeStream(
 			})
 			require.NoError(t, err)
 		}
+		//indicate to the server that we are done sending msgs and are awaiting the stream response.
 		stream.CloseAndRecv()
 	}
 	{

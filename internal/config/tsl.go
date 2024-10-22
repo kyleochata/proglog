@@ -18,6 +18,9 @@ type TLSConfig struct {
 }
 
 // SetupTLSConfig creates a *tls.Config based on the TLSConfig parameters passed to the func.
+// Configs to be tested:
+// Client *tls.Config set up to verify the server's cert with the client's by setting the *tls.Config's RootCAs and Certificates
+// Server *tls.Config is set up to verify the client's certificate and allows the client to verify the server's certificate by setting its ClientCAs, Certificate, and ClientAuth mode set to tls.RequireAndVerifyCert.
 func SetupTLSConfig(cfg TLSConfig) (*tls.Config, error) {
 	var err error
 	tlsConfig := &tls.Config{}

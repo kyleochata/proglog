@@ -13,14 +13,14 @@ init:
 .PHONY: gencert
 gencert:
 	cfssl gencert \
-		-initca ca-csr.json | cfssljson -bare ca
+		-initca test/ca-csr.json | cfssljson -bare ca
 	cfssl gencert \
 		-ca=ca.pem \
 		-ca-key=ca-key.pem \
-		-config=ca-config.json \
+		-config=test/ca-config.json \
 		-profile=server \
 		test/server-csr.json | cfssljson -bare server
-	mv *.pem .csr ${CONFIG_PATH}
+	mv *.pem *.csr ${CONFIG_PATH}
 
 .PHONY: test
 test:

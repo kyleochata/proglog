@@ -95,8 +95,8 @@ type CommitLog interface {
 }
 
 // NewGRPCServer instantiates service, create gRPC server, and register service to the server (gives user a server that just needs a listener for it to accept incoming connections)
-func NewGRPCServer(config *Config) (*grpc.Server, error) {
-	gsrv := grpc.NewServer()
+func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, error) {
+	gsrv := grpc.NewServer(opts...)
 	srv, err := newgrpcServer(config)
 	if err != nil {
 		return nil, err

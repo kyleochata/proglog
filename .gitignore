@@ -23,4 +23,5 @@ go.work.sum
 
 # env file
 .env
-test/ca_with_cfssl.txt
+
+/test/ca_with_cfssl.txt

@@ -1,0 +1,48 @@
+To initalize Certificate Authority (CA) and generate certs we need a config file containing general config info about our CA. 
+
+ca-csr.json
+cfssl will use this file to configure our CA's certs. 
+- CN == common name 
+- key == specific algorithm and size of key to sign the certificate with.
+- names == list of various name information that'll be added to cert:
+  - C - country
+  - L = locality or city
+  - ST - state or province
+  - O - organization name
+  - OU - organizational unit (dept responsible for owning the key)
+
+  ca-config.json:
+  CA needs to know what kind of certificates it will issue.
+  - Signing == defines the CA's signing policy
+    - config file dictates that the CA can generate client and server certificates that will expire after a year and the certificates may be used for digital signatures, encrypting keys and auth. 
+
+    server-csr.json:
+    cfssl will use these configs to configure our server's certificate.
+    - "hosts" == list of the domain names that the certificate should be valid for
+
+
+Update MAKEFILE:
+Added CONFIG_PATH variable to specify where we'd want to put our generated certificates and an init target to create that directory.
+- gencert - calls cfssl to generate the certificate and private keys for our CA and server using the config files above.
+
+1. Init:
+  a. Init creates a dir for config files if it doesn't already exist
+2. gencert:
+  `cfssl gencert -initca test/ca-csr.json | cfssljson -bare ca`
+  a. This generates a new CA key and certificate using the Certificate Signing Request(CSR)
+    - This is defined in ca-csr.json
+  `cfssljson -bare ca`
+  b. Processes the output of -initca and saves the resulting CA certificate and private key as ca.pem and ca-key.pem
+3. 2nd gencert:
+  `	cfssl gencert \
+		-ca=ca.pem \
+		-ca-key=ca-key.pem \
+		-config=test/ca-config.json \
+		-profile=server \
+		test/server-csr.json | cfssljson -bare server`
+
+  a. This generates a server certificate using the CA created above. 
+    - server certificate and key saved as server.pem and server-key.pem
+4. Moving the certs
+  a. mv *.pem *.csr ${CONFIG_PATH}
+  - moves the generated CA and server .pem and .csr files into s 

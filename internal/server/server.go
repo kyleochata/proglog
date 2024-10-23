@@ -4,10 +4,19 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	grpcMiddleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpcAuth "github.com/grpc-ecosystem/go-grpc-middleware/auth"
+	grpcZap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
+	grpcCtxTags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	api "github.com/kyleochata/proglog/api/v1"
+	"go.opencensus.io/plugin/ocgrpc"
+	"go.opencensus.io/stats/view"
+	"go.opencensus.io/trace"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -129,13 +138,38 @@ type Authorizer interface {
 
 // NewGRPCServer instantiates service, create gRPC server, and register service to the server (gives user a server that just needs a listener for it to accept incoming connections)
 // authenticate intercepter added to id the subject of each rpc and init authorization process
-func NewGRPCServer(config *Config, opts ...grpc.ServerOption) (*grpc.Server, error) {
-	opts = append(opts, grpc.StreamInterceptor(
-		grpcMiddleware.ChainStreamServer(
-			grpcAuth.StreamServerInterceptor(authenticate),
-		)), grpc.UnaryInterceptor(grpcMiddleware.ChainUnaryServer(grpcAuth.UnaryServerInterceptor(authenticate))),
+func NewGRPCServer(config *Config, grpcOpts ...grpc.ServerOption) (*grpc.Server, error) {
+
+	logger := zap.L().Named("server")
+	zapOpts := []grpcZap.Option{
+		grpcZap.WithDurationField(
+			func(duration time.Duration) zapcore.Field {
+				return zap.Int64(
+					"grpc.time_ns",
+					duration.Nanoseconds(),
+				)
+			},
+		),
+	}
+	trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
+	err := view.Register(ocgrpc.DefaultServerViews...)
+	if err != nil {
+		return nil, err
+	}
+	grpcOpts = append(grpcOpts,
+		grpc.StreamInterceptor(
+			grpcMiddleware.ChainStreamServer(
+				grpcCtxTags.StreamServerInterceptor(),
+				grpcZap.StreamServerInterceptor(logger, zapOpts...),
+				grpcAuth.StreamServerInterceptor(authenticate),
+			)), grpc.UnaryInterceptor(grpcMiddleware.ChainUnaryServer(
+			grpcCtxTags.UnaryServerInterceptor(),
+			grpcZap.UnaryServerInterceptor(logger, zapOpts...),
+			grpcAuth.UnaryServerInterceptor(authenticate),
+		)),
+		grpc.StatsHandler(&ocgrpc.ServerHandler{}),
 	)
-	gsrv := grpc.NewServer(opts...)
+	gsrv := grpc.NewServer(grpcOpts...)
 	srv, err := newgrpcServer(config)
 	if err != nil {
 		return nil, err

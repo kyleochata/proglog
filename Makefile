@@ -1,4 +1,4 @@
-CONFIG_PATH=${HOME}/.proglog/
+CONFIG_PATH=${HOME}/.proglog
 
 .PHONY: init
 init:
@@ -19,12 +19,28 @@ gencert:
 		-ca-key=ca-key.pem \
 		-config=test/ca-config.json \
 		-profile=client \
-		test/client-csr.json | cfssljson -bare client
-	ls -l 
+		-cn="root" \
+		test/client-csr.json | cfssljson -bare root-client
+	cfssl gencert \
+		-ca=ca.pem \
+		-ca-key=ca-key.pem \
+		-config=test/ca-config.json \
+		-profile=client \
+		-cn="nobody" \
+		test/client-csr.json | cfssljson -bare nobody-client
 	mv *.pem *.csr ${CONFIG_PATH}
 
+# This doesn't work. Won't copy the test files over
+# (CONFIG_PATH)/model.conf: 
+# 	cp test/model.conf $(CONFIG_PATH)/model.conf
+
+# (CONFIG_PATH)/policy.csv: 
+# 	cp test/policy.csv $(CONFIG_PATH)/policy.csv
+
 .PHONY: test
-test:
+test: 
+	cp test/model.conf $(CONFIG_PATH)/model.conf
+	cp test/policy.csv $(CONFIG_PATH)/policy.csv
 	go test -v ./... --race
 
 .PHONY: compile

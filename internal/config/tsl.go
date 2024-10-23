@@ -7,16 +7,6 @@ import (
 	"os"
 )
 
-// TLSConfig defines the parameters that SetupTLSConfig uses to determine what
-// type of *tls.Config to return
-type TLSConfig struct {
-	CertFile      string
-	KeyFile       string
-	CAFile        string
-	ServerAddress string
-	Server        bool
-}
-
 // SetupTLSConfig creates a *tls.Config based on the TLSConfig parameters passed to the func.
 // Configs to be tested:
 // Client *tls.Config set up to verify the server's cert with the client's by setting the *tls.Config's RootCAs and Certificates
@@ -53,4 +43,14 @@ func SetupTLSConfig(cfg TLSConfig) (*tls.Config, error) {
 		tlsConfig.ServerName = cfg.ServerAddress
 	}
 	return tlsConfig, nil
+}
+
+// TLSConfig defines the parameters that SetupTLSConfig uses to determine what
+// type of *tls.Config to return
+type TLSConfig struct {
+	CertFile      string
+	KeyFile       string
+	CAFile        string
+	ServerAddress string
+	Server        bool
 }

@@ -106,15 +106,18 @@ func (r *Replicator) Leave(name string) error {
 
 // init lazy inititializes the server map. lazy initialization gives structs useful zero value to reduce api's size and complexity while maintaining functionality. Without the zero value, must export a replicator constructor function for the user to call or export the servers field on the replicator struct for the user to set.
 func (r *Replicator) init() {
-	if r.logger == nil {
-		r.logger = zap.L().Named("replicator")
-	}
-	if r.servers == nil {
-		r.servers = make(map[string]chan struct{})
-	}
-	if r.close == nil {
-		r.close = make(chan struct{})
-	}
+	var once sync.Once
+	once.Do(func() {
+		if r.logger == nil {
+			r.logger = zap.L().Named("replicator")
+		}
+		if r.servers == nil {
+			r.servers = make(map[string]chan struct{})
+		}
+		if r.close == nil {
+			r.close = make(chan struct{})
+		}
+	})
 }
 
 // Close closes the replicator so it doesn't replicate new servers that join the cluster and it stops replicating existing servers by causing the replicate() goroutine to return

@@ -102,6 +102,8 @@ func TestAgent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, consumeResponse.Record.Value, []byte("test-testerson"))
 
+	//Fail when added. Produce only one record to the service and we're able to consume multiple records from teh original server because it's replicated data from another server that replicated its data from the original server.
+	//Need to have a defined leader-follower relationship.
 	// consumeResponse, err = leaderClient.Consume(
 	// 	context.Background(),
 	// 	&api.ConsumeRequest{

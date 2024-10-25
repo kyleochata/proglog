@@ -27,7 +27,7 @@ const (
 // store is a wrapper around a file with two APIs to append and read bytes to and from the file.
 type store struct {
 	*os.File
-	mu   sync.Mutex
+	mu   sync.Mutex //don't use RWMutex. buf.Flush() needs a RW lock
 	buf  *bufio.Writer
 	size uint64
 }

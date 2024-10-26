@@ -27,7 +27,7 @@ const (
 // store is a wrapper around a file with two APIs to append and read bytes to and from the file.
 type store struct {
 	*os.File
-	mu   sync.RWMutex
+	mu   sync.Mutex //don't use RWMutex. buf.Flush() needs a RW lock
 	buf  *bufio.Writer
 	size uint64
 }
@@ -68,8 +68,8 @@ func (s *store) Append(p []byte) (n uint64, pos uint64, err error) {
 // Read(uint64) returns the record stored at the given position.
 func (s *store) Read(pos uint64) ([]byte, error) {
 	// s.mu.Lock()
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	if err := s.buf.Flush(); err != nil {
 		return nil, err
 	}

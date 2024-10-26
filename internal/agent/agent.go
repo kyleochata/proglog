@@ -69,6 +69,7 @@ func New(config Config) (*Agent, error) {
 	return a, nil
 }
 
+// setupLogger creates a new Zap Logger. It then calls ReplaceGlobals replaces the global and sugared logger
 func (a *Agent) setupLogger() error {
 	logger, err := zap.NewDevelopment()
 	if err != nil {
@@ -78,6 +79,7 @@ func (a *Agent) setupLogger() error {
 	return nil
 }
 
+// setupLog creates a Log service for the agent
 func (a *Agent) setupLog() error {
 	var err error
 	a.log, err = log.NewLog(a.Config.DataDir, log.Config{})

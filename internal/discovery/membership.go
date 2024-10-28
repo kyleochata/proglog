@@ -3,6 +3,7 @@ package discovery
 import (
 	"net"
 
+	"github.com/hashicorp/raft"
 	"github.com/hashicorp/serf/serf"
 	"go.uber.org/zap"
 )
@@ -133,9 +134,13 @@ func (m *Membership) Leave() error {
 	return m.serf.Leave()
 }
 
-// logError logs the given error and message
+// logError logs the given error and message. Raft will error and return ErrNotLeader when you try to change the cluster on non-leader nodes. In discovery service log all handler errors as critical, but if the node is a non-leader, then we should expect these errors and not log them. Non-leader errors will be logged at the debug level.
 func (m *Membership) logError(err error, msg string, member serf.Member) {
-	m.logger.Error(
+	log := m.logger.Error
+	if err == raft.ErrNotLeader {
+		log = m.logger.Debug
+	}
+	log(
 		msg,
 		zap.Error(err),
 		zap.String("name", member.Name),

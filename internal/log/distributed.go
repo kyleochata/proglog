@@ -22,6 +22,7 @@ type DistributedLog struct {
 	raft   *raft.Raft
 }
 
+// NewDistributedLog returns a pointer to a new DistributedLog. Creates a log and then sets up Raft.
 func NewDistributedLog(dataDir string, config Config) (*DistributedLog, error) {
 	dl := &DistributedLog{config: config}
 	if err := dl.setupLog(dataDir); err != nil {
@@ -93,7 +94,7 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 	config.LocalID = l.config.Raft.LocalID
 	//Overriding timeouts to speed up test
 
-	//TODO: remove before prod
+	//TODO: remove before deploy
 	if l.config.Raft.HeartbeatTimeout != 0 {
 		config.HeartbeatTimeout = l.config.Raft.HeartbeatTimeout
 	}
@@ -241,6 +242,23 @@ func (l *DistributedLog) Close() error {
 		return err
 	}
 	return l.log.Close()
+}
+
+// GetServers converts the data from Raft's raft.Server type into *api.Server for API to respond with.
+func (l *DistributedLog) GetServers() ([]*api.Server, error) {
+	future := l.raft.GetConfiguration()
+	if err := future.Error(); err != nil {
+		return nil, err
+	}
+	var servers []*api.Server
+	for _, server := range future.Configuration().Servers {
+		servers = append(servers, &api.Server{
+			Id:       string(server.ID),
+			RpcAddr:  string(server.Address),
+			IsLeader: l.raft.Leader() == server.Address,
+		})
+	}
+	return servers, nil
 }
 
 // Raft defers the running of business logic to FSM

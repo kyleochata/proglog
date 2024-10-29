@@ -15,6 +15,7 @@ import (
 	"github.com/travisjeffery/go-dynaport"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/status"
 )
 
 func TestAgent(t *testing.T) {
@@ -58,6 +59,7 @@ func TestAgent(t *testing.T) {
 			ACLPolicyFile:   config.ACLPolicyFile,
 			ServerTLSConfig: serverTLSConfig,
 			PeerTLSConfig:   peerTLSConfig,
+			Bootstrap:       i == 0,
 		})
 		require.NoError(t, err)
 		agents = append(agents, agent)
@@ -104,17 +106,17 @@ func TestAgent(t *testing.T) {
 
 	//Fail when added. Produce only one record to the service and we're able to consume multiple records from teh original server because it's replicated data from another server that replicated its data from the original server.
 	//Need to have a defined leader-follower relationship.
-	// consumeResponse, err = leaderClient.Consume(
-	// 	context.Background(),
-	// 	&api.ConsumeRequest{
-	// 		Offset: produceResponse.Offset + 1,
-	// 	},
-	// )
-	// require.Nil(t, consumeResponse)
-	// require.Error(t, err)
-	// got := status.Code(err)
-	// want := status.Code(api.ErrOffsetOutOfRange{}.GRPCStatus().Err())
-	// require.Equal(t, got, want)
+	consumeResponse, err = leaderClient.Consume(
+		context.Background(),
+		&api.ConsumeRequest{
+			Offset: produceResponse.Offset + 1,
+		},
+	)
+	require.Nil(t, consumeResponse)
+	require.Error(t, err)
+	got := status.Code(err)
+	want := status.Code(api.ErrOffsetOutOfRange{}.GRPCStatus().Err())
+	require.Equal(t, got, want)
 }
 
 func client(t *testing.T, agent *agent.Agent, tlsConfig *tls.Config) api.LogClient {

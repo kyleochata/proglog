@@ -141,8 +141,9 @@ func (a *Agent) setupLog() error {
 func (a *Agent) setupServer() error {
 	authorizer := auth.New(a.Config.ACLModelFile, a.Config.ACLPolicyFile)
 	serverConfig := &server.Config{
-		CommitLog:  a.log,
-		Authorizer: authorizer,
+		CommitLog:   a.log,
+		Authorizer:  authorizer,
+		GetServerer: a.log, //expose server endpoint that clients can call to get cluster's servers.
 	}
 	var opts []grpc.ServerOption
 	if a.Config.ServerTLSConfig != nil {

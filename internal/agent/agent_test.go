@@ -11,6 +11,7 @@ import (
 	api "github.com/kyleochata/proglog/api/v1"
 	"github.com/kyleochata/proglog/internal/agent"
 	"github.com/kyleochata/proglog/internal/config"
+	"github.com/kyleochata/proglog/internal/loadbalance"
 	"github.com/stretchr/testify/require"
 	"github.com/travisjeffery/go-dynaport"
 	"google.golang.org/grpc"
@@ -74,8 +75,11 @@ func TestAgent(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	leaderClient := client(t, agents[0], peerTLSConfig)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+
+	defer cancel()
 	produceResponse, err := leaderClient.Produce(
-		context.Background(),
+		ctx,
 		&api.ProduceRequest{
 			Record: &api.Record{
 				Value: []byte("test-testerson"),
@@ -83,8 +87,13 @@ func TestAgent(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
+
+	//wait until replication has finished
+	//before we had the sleep above the followerClient because the lead client originally was connected to the lead server and didn't have to wait for replication on Consume calls.
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	consumeResponse, err := leaderClient.Consume(
-		context.Background(),
+		ctx,
 		&api.ConsumeRequest{
 			Offset: produceResponse.Offset,
 		},
@@ -92,11 +101,13 @@ func TestAgent(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, consumeResponse.Record.Value, []byte("test-testerson"))
 
-	//wait until replication has finished
-	time.Sleep(3 * time.Second)
 	followerClient := client(t, agents[1], peerTLSConfig)
+
+	//Wait for lead to replicate when leadClient is connected to lead server
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 	consumeResponse, err = followerClient.Consume(
-		context.Background(),
+		ctx,
 		&api.ConsumeRequest{
 			Offset: produceResponse.Offset,
 		},
@@ -124,7 +135,9 @@ func client(t *testing.T, agent *agent.Agent, tlsConfig *tls.Config) api.LogClie
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(tlsCreds)}
 	rpcAddr, err := agent.Config.RPCAddr()
 	require.NoError(t, err)
-	conn, err := grpc.NewClient(rpcAddr, opts...)
+	//specify scheme in the URL so gRPC knows to use the resolver
+	conn, err := grpc.NewClient(fmt.Sprintf("%s:///%s", loadbalance.Name, rpcAddr), opts...)
+
 	require.NoError(t, err)
 	client := api.NewLogClient(conn)
 	return client

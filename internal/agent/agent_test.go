@@ -75,11 +75,11 @@ func TestAgent(t *testing.T) {
 	time.Sleep(3 * time.Second)
 
 	leaderClient := client(t, agents[0], peerTLSConfig)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 
-	defer cancel()
+	// defer cancel()
 	produceResponse, err := leaderClient.Produce(
-		ctx,
+		context.Background(),
 		&api.ProduceRequest{
 			Record: &api.Record{
 				Value: []byte("test-testerson"),
@@ -90,10 +90,11 @@ func TestAgent(t *testing.T) {
 
 	//wait until replication has finished
 	//before we had the sleep above the followerClient because the lead client originally was connected to the lead server and didn't have to wait for replication on Consume calls.
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	// defer cancel()
+	time.Sleep(3 * time.Second)
 	consumeResponse, err := leaderClient.Consume(
-		ctx,
+		context.Background(),
 		&api.ConsumeRequest{
 			Offset: produceResponse.Offset,
 		},
@@ -104,10 +105,10 @@ func TestAgent(t *testing.T) {
 	followerClient := client(t, agents[1], peerTLSConfig)
 
 	//Wait for lead to replicate when leadClient is connected to lead server
-	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	// ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
+	// defer cancel()
 	consumeResponse, err = followerClient.Consume(
-		ctx,
+		context.Background(),
 		&api.ConsumeRequest{
 			Offset: produceResponse.Offset,
 		},

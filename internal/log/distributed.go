@@ -131,7 +131,7 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 	//Bootstrap a server config with itself as the only voter, wait until it becomes the leader, and then tell the leader to add more servers to the cluster
 	if l.config.Raft.Bootstrap && !hasState {
 		config := raft.Configuration{
-			Servers: []raft.Server{{ID: config.LocalID, Address: transport.LocalAddr()}},
+			Servers: []raft.Server{{ID: config.LocalID, Address: raft.ServerAddress(l.config.Raft.BindAddr)}},
 		}
 		err = l.raft.BootstrapCluster(config).Error()
 	}
@@ -325,38 +325,6 @@ func (s *snapshot) Persist(sink raft.SnapshotSink) error {
 func (s *snapshot) Release() {}
 
 // Restore resets the log and configures its inital offset to the first record's offset read from the snapshot so the log's offests match. Records are read from the snapshot and append them to the new log.
-//
-//	func (f *fsm) Restore(r io.ReadCloser) error {
-//		b := make([]byte, lenWidth)
-//		var buf bytes.Buffer
-//		for i := 0; ; i++ {
-//			_, err := io.ReadFull(r, b)
-//			if err == io.EOF {
-//				break
-//			} else if err != nil {
-//				return err
-//			}
-//			size := int64(enc.Uint64(b))
-//			if _, err = io.CopyN(&buf, r, size); err != nil {
-//				return err
-//			}
-//			record := &api.Record{}
-//			if err = proto.Unmarshal(buf.Bytes(), record); err != nil {
-//				return err
-//			}
-//			if i == 0 {
-//				f.log.Config.Segment.InitialOffset = record.Offset
-//				if err := f.log.Reset(); err != nil {
-//					return err
-//				}
-//			}
-//			if _, err = f.log.Append(record); err != nil {
-//				return err
-//			}
-//			buf.Reset()
-//		}
-//		return nil
-//	}
 func (f *fsm) Restore(r io.ReadCloser) error {
 	b := make([]byte, lenWidth)
 	for i := 0; ; i++ {

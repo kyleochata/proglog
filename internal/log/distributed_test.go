@@ -36,7 +36,7 @@ func TestMulitpleNodes(t *testing.T) {
 		config.Raft.ElectionTimeout = 50 * time.Millisecond
 		config.Raft.LeaderLeaseTimeout = 50 * time.Millisecond
 		config.Raft.CommitTimeout = 5 * time.Millisecond
-
+		config.Raft.BindAddr = ln.Addr().String()
 		// first server bootstraps the cluster, becomes leader and adds the remaining servers into the cluster.
 		if i == 0 {
 			config.Raft.Bootstrap = true
@@ -53,6 +53,7 @@ func TestMulitpleNodes(t *testing.T) {
 		logs = append(logs, l)
 	}
 
+	//Testing distributed log replication
 	records := []*api.Record{
 		{Value: []byte("first")},
 		{Value: []byte("second")},

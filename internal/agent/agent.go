@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"github.com/hashicorp/raft"
-	"github.com/soheilhy/cmux"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"github.com/kyleochata/proglog/internal/auth"
 	"github.com/kyleochata/proglog/internal/discovery"
 	"github.com/kyleochata/proglog/internal/log"
 	"github.com/kyleochata/proglog/internal/server"
+	"github.com/soheilhy/cmux"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 // Agent runs on every service instance, setting up and connecting all the different components
@@ -36,14 +36,19 @@ type Agent struct {
 type Config struct {
 	ServerTLSConfig *tls.Config
 	PeerTLSConfig   *tls.Config
-	DataDir         string
-	BindAddr        string
-	RPCPort         int
-	NodeName        string
-	StartJoinAddrs  []string
-	ACLModelFile    string
-	ACLPolicyFile   string
-	Bootstrap       bool
+	// DataDir stores log and raft data
+	DataDir string
+	// BindAddr is the address serf runs on
+	BindAddr string
+	//RPCPort is port for client (and Raft) connections
+	RPCPort int
+	// Raft server id.
+	NodeName       string
+	StartJoinAddrs []string
+	ACLModelFile   string
+	ACLPolicyFile  string
+	// Bootstrap should be set true when starting the first node of the cluster.
+	Bootstrap bool
 }
 
 func (c Config) RPCAddr() (string, error) {
@@ -61,7 +66,7 @@ func New(config Config) (*Agent, error) {
 		shutdowns: make(chan struct{}),
 	}
 	setup := []func() error{
-		// a.setupLogger,
+		a.setupLogger,
 		a.setupMux,
 		a.setupLog,
 		a.setupServer,
@@ -78,7 +83,11 @@ func New(config Config) (*Agent, error) {
 
 // setupMux creates a listener on RPC address that'll accept both Raft and gRPC connections. Creates the mux with the listener. Mux will accept connections on that listener and match connections based on configured rules
 func (a *Agent) setupMux() error {
-	rpcAddr := fmt.Sprintf(":%d", a.Config.RPCPort)
+	addr, err := net.ResolveTCPAddr("tcp", a.Config.BindAddr)
+	if err != nil {
+		return err
+	}
+	rpcAddr := fmt.Sprintf("%s:%d", addr.IP.String(), a.Config.RPCPort)
 	ln, err := net.Listen("tcp", rpcAddr)
 	if err != nil {
 		return err
@@ -88,14 +97,14 @@ func (a *Agent) setupMux() error {
 }
 
 // setupLogger creates a new Zap Logger. It then calls ReplaceGlobals replaces the global and sugared logger.
-// func (a *Agent) setupLogger() error {
-// 	logger, err := zap.NewDevelopment()
-// 	if err != nil {
-// 		return err
-// 	}
-// 	zap.ReplaceGlobals(logger)
-// 	return nil
-// }
+func (a *Agent) setupLogger() error {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		return err
+	}
+	zap.ReplaceGlobals(logger)
+	return nil
+}
 
 // setupLog creates a Log service for the agent. (FOR non-multiplexed port)
 //
@@ -123,9 +132,16 @@ func (a *Agent) setupLog() error {
 		a.Config.ServerTLSConfig,
 		a.Config.PeerTLSConfig,
 	)
+
+	rpcAddr, err := a.Config.RPCAddr()
+	if err != nil {
+		return err
+	}
+
+	logConfig.Raft.BindAddr = rpcAddr
 	logConfig.Raft.LocalID = raft.ServerID(a.Config.NodeName)
 	logConfig.Raft.Bootstrap = a.Config.Bootstrap
-	var err error
+
 	a.log, err = log.NewDistributedLog(a.Config.DataDir, logConfig)
 	if err != nil {
 		return err
@@ -164,20 +180,6 @@ func (a *Agent) setupServer() error {
 		}
 	}()
 	return err
-	// rpcAddr, err := a.RPCAddr()
-	// if err != nil {
-	// 	return err
-	// }
-	// ln, err := net.Listen("tcp", rpcAddr)
-	// if err != nil {
-	// 	return err
-	// }
-	// go func() {
-	// 	if err := a.server.Serve(ln); err != nil {
-	// 		_ = a.Shutdown()
-	// 	}
-	// }()
-	// return err
 }
 
 // setupMembership dictates to the DistributedLog when servers join or leave the cluster.

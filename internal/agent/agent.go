@@ -24,11 +24,11 @@ import (
 // Agent runs on every service instance, setting up and connecting all the different components
 type Agent struct {
 	Config
-	mux          cmux.CMux
-	log          *log.DistributedLog
-	server       *grpc.Server
-	membership   *discovery.Membership
-	replicator   *log.Replicator
+	mux        cmux.CMux
+	log        *log.DistributedLog
+	server     *grpc.Server
+	membership *discovery.Membership
+	// replicator   *log.Replicator
 	shutdown     bool
 	shutdowns    chan struct{}
 	shutdownLock sync.Mutex
@@ -79,7 +79,18 @@ func New(config Config) (*Agent, error) {
 
 // setupMux creates a listener on RPC address that'll accept both Raft and gRPC connections. Creates the mux with the listener. Mux will accept connections on that listener and match connections based on configured rules
 func (a *Agent) setupMux() error {
-	rpcAddr := fmt.Sprintf(":%d", a.Config.RPCPort)
+	// rpcAddr := fmt.Sprintf(":%d", a.Config.RPCPort)
+	// ln, err := net.Listen("tcp", rpcAddr)
+	// if err != nil {
+	// 	return err
+	// }
+	// a.mux = cmux.New(ln)
+	// return nil
+	addr, err := net.ResolveTCPAddr("tcp", a.Config.BindAddr)
+	if err != nil {
+		return err
+	}
+	rpcAddr := fmt.Sprintf("%s:%d", addr.IP.String(), a.Config.RPCPort)
 	ln, err := net.Listen("tcp", rpcAddr)
 	if err != nil {
 		return err
@@ -124,9 +135,13 @@ func (a *Agent) setupLog() error {
 		a.Config.ServerTLSConfig,
 		a.Config.PeerTLSConfig,
 	)
+	rpcAddr, err := a.Config.RPCAddr()
+	if err != nil {
+		return err
+	}
+	logConfig.Raft.BindAddr = rpcAddr
 	logConfig.Raft.LocalID = raft.ServerID(a.Config.NodeName)
 	logConfig.Raft.Bootstrap = a.Config.Bootstrap
-	var err error
 	a.log, err = log.NewDistributedLog(a.Config.DataDir, logConfig)
 	if err != nil {
 		return err
@@ -183,10 +198,11 @@ func (a *Agent) setupServer() error {
 
 // setupMembership dictates to the DistributedLog when servers join or leave the cluster.
 func (a *Agent) setupMembership() error {
-	rpcAddr, err := a.Config.RPCAddr()
-	if err != nil {
-		return err
+	rpcAddr, rpcErr := a.Config.RPCAddr()
+	if rpcErr != nil {
+		return rpcErr
 	}
+	var err error
 	a.membership, err = discovery.New(a.log, discovery.Config{
 		NodeName:       a.Config.NodeName,
 		BindAddr:       a.Config.BindAddr,

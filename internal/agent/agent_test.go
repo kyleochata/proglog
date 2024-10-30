@@ -86,6 +86,7 @@ func TestAgent(t *testing.T) {
 			},
 		},
 	)
+	fmt.Println("Produce offset:", produceResponse.Offset)
 	require.NoError(t, err)
 
 	//wait until replication has finished

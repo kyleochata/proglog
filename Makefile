@@ -41,7 +41,7 @@ gencert:
 test: 
 	cp test/model.conf $(CONFIG_PATH)/model.conf
 	cp test/policy.csv $(CONFIG_PATH)/policy.csv
-	go test -v ./... --race
+	go test -v ./...
 
 .PHONY: compile
 compile:

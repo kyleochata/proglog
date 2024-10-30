@@ -42,7 +42,6 @@ type Config struct {
 
 // setupSerf creates and configures a Serf instance and starts the eventsHandler go routine to handle Serf's events
 func (m *Membership) setupSerf() (err error) {
-	//
 	addr, err := net.ResolveTCPAddr("tcp", m.BindAddr)
 	if err != nil {
 		return err

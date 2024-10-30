@@ -11,7 +11,6 @@ import (
 
 	"github.com/hashicorp/raft"
 	"github.com/soheilhy/cmux"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 
@@ -24,11 +23,11 @@ import (
 // Agent runs on every service instance, setting up and connecting all the different components
 type Agent struct {
 	Config
-	mux          cmux.CMux
-	log          *log.DistributedLog
-	server       *grpc.Server
-	membership   *discovery.Membership
-	replicator   *log.Replicator
+	mux        cmux.CMux
+	log        *log.DistributedLog
+	server     *grpc.Server
+	membership *discovery.Membership
+	// replicator   *log.Replicator
 	shutdown     bool
 	shutdowns    chan struct{}
 	shutdownLock sync.Mutex
@@ -62,7 +61,7 @@ func New(config Config) (*Agent, error) {
 		shutdowns: make(chan struct{}),
 	}
 	setup := []func() error{
-		a.setupLogger,
+		// a.setupLogger,
 		a.setupMux,
 		a.setupLog,
 		a.setupServer,
@@ -89,14 +88,14 @@ func (a *Agent) setupMux() error {
 }
 
 // setupLogger creates a new Zap Logger. It then calls ReplaceGlobals replaces the global and sugared logger.
-func (a *Agent) setupLogger() error {
-	logger, err := zap.NewDevelopment()
-	if err != nil {
-		return err
-	}
-	zap.ReplaceGlobals(logger)
-	return nil
-}
+// func (a *Agent) setupLogger() error {
+// 	logger, err := zap.NewDevelopment()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	zap.ReplaceGlobals(logger)
+// 	return nil
+// }
 
 // setupLog creates a Log service for the agent. (FOR non-multiplexed port)
 //
@@ -132,9 +131,9 @@ func (a *Agent) setupLog() error {
 		return err
 	}
 	if a.Config.Bootstrap {
-		err = a.log.WaitForLeader(3 * time.Second)
+		return a.log.WaitForLeader(3 * time.Second)
 	}
-	return err
+	return nil
 }
 
 // setupServer uses the mux's listener to create the new GRPC server. Two connections are multiplexed(Raft, gRPC) and there is a matcher added for the raft connections. Know all other connections must be gRPC connections.

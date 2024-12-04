@@ -1,0 +1,37 @@
+# image:
+#   repository: github.com/kyleochata/proglog
+#   tag: 0.0.1
+#   pullPolicy: IfNotPresent
+# serfPort: 8401
+# rpcPort: 8400
+# replicas: 3
+# storage: 1Gi
+
+# service:
+#   port: 8400
+
+# serviceAccount:
+#   create: true
+#   annotations: {}
+#   automount: true
+
+# ingress:
+#   enabled: false # Set to true if you plan to use ingress
+#   annotations: {}
+#   hosts:
+#     - host: chart-example.local
+#       paths:
+#         - path: /
+#           pathType: ImplementationSpecific
+#   tls: []
+# Default values for proglog.
+image:
+  repository: github.com/kyleochata/proglog
+  tag: 0.0.1
+  pullPolicy: IfNotPresent
+
+serfPort: 8401
+rpcPort: 8400
+replicas: 3
+storage: 1Gi
+

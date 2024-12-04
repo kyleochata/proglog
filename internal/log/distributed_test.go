@@ -29,6 +29,7 @@ func TestMulitpleNodes(t *testing.T) {
 		}(dataDir)
 		ln, err := net.Listen("tcp", fmt.Sprintf("127.0.0.1:%d", ports[i]))
 		require.NoError(t, err)
+
 		config := log.Config{}
 		config.Raft.StreamLayer = log.NewStreamLayer(ln, nil, nil)
 		config.Raft.LocalID = raft.ServerID(fmt.Sprintf("%d", i))
@@ -36,6 +37,7 @@ func TestMulitpleNodes(t *testing.T) {
 		config.Raft.ElectionTimeout = 50 * time.Millisecond
 		config.Raft.LeaderLeaseTimeout = 50 * time.Millisecond
 		config.Raft.CommitTimeout = 5 * time.Millisecond
+		config.Raft.BindAddr = ln.Addr().String()
 
 		// first server bootstraps the cluster, becomes leader and adds the remaining servers into the cluster.
 		if i == 0 {

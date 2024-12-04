@@ -94,19 +94,19 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 	config.LocalID = l.config.Raft.LocalID
 	//Overriding timeouts to speed up test
 
-	//TODO: remove before deploy
-	if l.config.Raft.HeartbeatTimeout != 0 {
-		config.HeartbeatTimeout = l.config.Raft.HeartbeatTimeout
-	}
-	if l.config.Raft.ElectionTimeout != 0 {
-		config.ElectionTimeout = l.config.Raft.ElectionTimeout
-	}
-	if l.config.Raft.LeaderLeaseTimeout != 0 {
-		config.LeaderLeaseTimeout = l.config.Raft.LeaderLeaseTimeout
-	}
-	if l.config.Raft.CommitTimeout != 0 {
-		config.CommitTimeout = l.config.Raft.CommitTimeout
-	}
+	// //TODO: remove before deploy
+	// if l.config.Raft.HeartbeatTimeout != 0 {
+	// 	config.HeartbeatTimeout = l.config.Raft.HeartbeatTimeout
+	// }
+	// if l.config.Raft.ElectionTimeout != 0 {
+	// 	config.ElectionTimeout = l.config.Raft.ElectionTimeout
+	// }
+	// if l.config.Raft.LeaderLeaseTimeout != 0 {
+	// 	config.LeaderLeaseTimeout = l.config.Raft.LeaderLeaseTimeout
+	// }
+	// if l.config.Raft.CommitTimeout != 0 {
+	// 	config.CommitTimeout = l.config.Raft.CommitTimeout
+	// }
 
 	//create the Raft instance and Bootstrap cluster
 	l.raft, err = raft.NewRaft(
@@ -131,7 +131,10 @@ func (l *DistributedLog) setupRaft(dataDir string) error {
 	//Bootstrap a server config with itself as the only voter, wait until it becomes the leader, and then tell the leader to add more servers to the cluster
 	if l.config.Raft.Bootstrap && !hasState {
 		config := raft.Configuration{
-			Servers: []raft.Server{{ID: config.LocalID, Address: transport.LocalAddr()}},
+			Servers: []raft.Server{{
+				ID:      config.LocalID,
+				Address: raft.ServerAddress(l.config.Raft.BindAddr),
+			}},
 		}
 		err = l.raft.BootstrapCluster(config).Error()
 	}
@@ -291,10 +294,12 @@ func (f *fsm) applyAppend(b []byte) interface{} {
 	var req api.ProduceRequest
 	err := proto.Unmarshal(b, &req)
 	if err != nil {
+		fmt.Printf("Failed to unmarshal ProduceRequest: %v\n", err)
 		return err
 	}
 	offset, err := f.log.Append(req.Record)
 	if err != nil {
+		fmt.Printf("Failed to append record to log: %v\n", err)
 		return err
 	}
 	return &api.ProduceResponse{Offset: offset}
